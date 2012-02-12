@@ -93,13 +93,24 @@ namespace option
 	  } // end long
 	  else { // short
 
+	    const int num_opts = strlen(argv[idx]);
+	    int s=0;
+	  option_parse_short_start:
+	    ++s;
+
+	    const char c_opt = argv[idx][s];
+
 	    for(int i=0; i<items.size(); ++i) {
-	      if(items[i].short_char == argv[idx][1]) {
-		++idx;
-
-		idx += (this->*items[i].parse)(&argv[idx]);
-
-		goto option_parse_start;
+	      if(items[i].short_char == c_opt) {
+		if(s==num_opts-1) {
+		  ++idx;
+		  idx += (this->*items[i].parse)(&argv[idx]);
+		  goto option_parse_start;
+		} else {
+		  (this->*items[i].parse)(NULL);
+		  goto option_parse_short_start;
+		}
+ 
 	      }
 	    }
 	    fprintf(stderr, "invalid option %s\n", argv[idx]);
@@ -125,7 +136,7 @@ namespace option
     void usage(FILE* const fp = stderr) const
     {
 
-      fprintf(fp, "Usage: %s [options]... [values]...\n", proc_name);
+      fprintf(fp, "Usage: %s [args]...\n", proc_name);
       for(int i=0; i<items.size(); ++i) {
 
 	if(items[i].short_char!='-')
@@ -134,7 +145,7 @@ namespace option
 	  fprintf(fp, "      --%s", items[i].long_str.c_str());
 
 	for(int p=0; p<items[i].num_args; ++p) {
-	  fprintf(fp, " value[%d]", p);
+	  fprintf(fp, " value[%d]", p+1);
 	}
 	fprintf(fp, "\t: %s\n", items[i].desc_str.c_str());
       }

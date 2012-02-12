@@ -22,16 +22,20 @@ public:
 private:
   int all(const char* const argv[]) const
   {
+    (void)argv;
+
     std::fprintf(stderr, "A\n");
     return 0;
 
   }
 
 private:
-  int help(const char* const argv) const
+  int help(const char* const argv[]) const
   {
+    (void)argv;
+
     this->usage();
-    exit(1);
+    //exit(1);
     return 0;
   }
 
