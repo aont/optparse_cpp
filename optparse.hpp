@@ -16,20 +16,20 @@ namespace option
     char short_char;
     std::string long_str;
     std::string desc_str;
-    int num_args;
-    int (parser::*parse)(const char* const argv[]);
+    int (parser::*parse)(const char* const argv);
+    unsigned use_arg:1;
 
-    item() : short_char('-'), num_args(0), parse(NULL)
+    item() : short_char('-'), use_arg(0), parse(NULL)
     { }
 
     item
     (
      char short_char, std::string long_str,
-     std::string desc_str, int num_args,
-     int (parser::*parse)(const char* const argv[])
+     std::string desc_str, unsigned use_arg,
+     int (parser::*parse)(const char* const argv)
      )
       : short_char(short_char), long_str(long_str)
-      , desc_str(desc_str), num_args(num_args)
+      , desc_str(desc_str), use_arg(use_arg)
       , parse(parse)
     { }
 
@@ -40,7 +40,7 @@ namespace option
   class parser
   {
   public:
-    typedef int (parser::*parse_func)(const char* const argv[]);
+    typedef int (parser::*parse_func)(const char* const argv);
 
   protected:
     std::vector<option::item> items;
@@ -77,16 +77,45 @@ namespace option
 	      this->parse_value(argv[idx]);
 	    }
 	    else {
-	      
-	      for(int i=0; i<items.size(); ++i) {
-		if(items[i].long_str == &argv[idx][2]) {
-		  ++idx;
-		  idx += (this->*items[i].parse)(&argv[idx]);
-		  goto option_parse_start;
+
+	      for(int s=2; true; ++s) {
+		if(argv[idx][s]=='\0') {
+
+		  for(int i=0; i<items.size(); ++i) {
+		    if(items[i].long_str==&argv[idx][2]) {
+		      ++idx;
+		      if(idx!=argc)
+			idx += (this->*items[i].parse)(argv[idx]);
+		      else
+			(this->*items[i].parse)(NULL);
+
+		      goto option_parse_start;
+		    }
+		  }
+		  fprintf(stderr, "invalid option %s\n", argv[idx]);
+		  throw;
+
+		} else if(argv[idx][s]=='=') {
+
+		  for(int i=0; i<items.size(); ++i) {
+		    if(items[i].long_str.compare
+		       (0, items[i].long_str.size(),
+			&argv[idx][2], s-2)==0) {
+
+		      (this->*items[i].parse)(&argv[idx][s+1]);
+		      ++idx;
+
+		      goto option_parse_start;
+		    }
+		  }
+		  fprintf(stderr, "invalid option %s\n", argv[idx]);
+		  throw;
+
 		}
 	      }
-	      fprintf(stderr, "invalid option %s\n", argv[idx]);
-	      throw;
+
+
+
 
 	    }
 
@@ -104,7 +133,11 @@ namespace option
 	      if(items[i].short_char == c_opt) {
 		if(s==num_opts-1) {
 		  ++idx;
-		  idx += (this->*items[i].parse)(&argv[idx]);
+		  if(idx!=argc)
+		    idx += (this->*items[i].parse)(argv[idx]);
+		  else
+		    idx += (this->*items[i].parse)(NULL);
+
 		  goto option_parse_start;
 		} else {
 		  (this->*items[i].parse)(NULL);
@@ -144,8 +177,8 @@ namespace option
 	else
 	  fprintf(fp, "      --%s", items[i].long_str.c_str());
 
-	for(int p=0; p<items[i].num_args; ++p) {
-	  fprintf(fp, " value[%d]", p+1);
+	if(items[i].use_arg) {
+	  fprintf(fp, " value");
 	}
 	fprintf(fp, "\t: %s\n", items[i].desc_str.c_str());
       }
