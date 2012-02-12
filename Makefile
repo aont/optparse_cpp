@@ -2,11 +2,11 @@ TARGET	= prog
 CXXFLAGS	= -O0 -g
 
 .PHONY: all
-all: ${TARGET}
+all: $(TARGET)
 
 .PHONY: clean
 clean:
-	${RM} ${TARGET}
+	$(RM) $(TARGET)
 
-${TARGET}: main.cpp
+${TARGET}: main.cpp optparse.hpp
 	$(CXX) $(CXXFLAGS) $(LDFLAGS) -o $(TARGET) main.cpp
